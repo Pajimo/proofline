@@ -1,0 +1,59 @@
+# Ground truth for one clip. Copy to <clip_id>.yaml and fill in.
+# Times are "mm:ss" (or "h:mm:ss") from the start of the clip. Scrub the video to get them.
+# Part ids must match packs/plumbing.yaml (parts[].id).
+
+clip_id: job01                 # job01-06, trap01-06, priv01-04, narr01-04
+set: job                       # job | trap | privacy | narration_only
+pack: plumbing
+job_type: tap_cartridge        # an id from packs/plumbing.yaml jobs[], or "other"
+video: evals/raw/job01.mp4     # git-ignored; never commit footage
+recorded_on: 2026-10-28
+duration: "00:00"              # total clip length
+billable_minutes: 0            # time you would actually charge for
+
+# What happened, in order. Times within about 5 s are fine.
+steps:
+  - name: isolate water
+    start: "00:00"
+    end: "00:00"
+  # - name: remove handle
+  #   start: "00:00"
+  #   end: "00:00"
+
+# Parts actually USED (fitted or consumed). Leave out anything only shown or named.
+parts_used:
+  - part: ceramic_cartridge
+    qty: 1
+    shown: true                # visible on camera
+    named: true                # said out loud
+    first_seen: "00:00"        # first clear view of the new part
+    fitted_at: "00:00"         # moment it goes in: the "after" proof
+    old_part_seen: "00:00"     # old part removed: the "before" proof (null if none)
+
+# The invoice you would write by hand. The pipeline is scored against this.
+expected_invoice:
+  - kind: labour               # part | labour | callout | other
+    description: Labour
+    qty: 0.75                  # hours for labour
+    proof_start: "00:00"       # the span a proof link should point at
+    proof_end: "00:00"
+  - kind: part
+    part: ceramic_cartridge
+    qty: 1
+    proof_start: "00:00"
+    proof_end: "00:00"
+
+# Trap clips only: what the pipeline must do. Delete for other sets.
+traps: []
+#  - type: shown_not_used       # shown_not_used | named_not_shown | price_spoken_aloud
+#    part: trv
+#    at: "00:00"
+#    expect: no_line            # no_line | flag_narration_only | use_price_list
+
+# Anything that must be blurred, in ANY clip (not just privacy clips).
+privacy: []
+#  - type: framed_photo         # face | framed_photo | house_number | envelope | other
+#    first_seen: "00:00"
+#    last_seen: "00:00"
+
+notes: ""

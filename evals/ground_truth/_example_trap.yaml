@@ -1,0 +1,50 @@
+# Worked example (made up, not a real recording) showing how to fill in a trap clip.
+clip_id: trap01
+set: trap
+pack: plumbing
+job_type: tap_cartridge
+video: evals/raw/trap01.mp4
+recorded_on: 2026-10-28
+duration: "02:10"
+billable_minutes: 0
+
+steps:
+  - name: remove handle
+    start: "00:08"
+    end: "00:31"
+  - name: fit new cartridge
+    start: "00:52"
+    end: "01:40"
+
+parts_used:
+  - part: ceramic_cartridge
+    qty: 1
+    shown: true
+    named: true
+    first_seen: "00:45"
+    fitted_at: "01:30"
+    old_part_seen: "00:35"
+
+expected_invoice:
+  - kind: part
+    part: ceramic_cartridge
+    qty: 1
+    proof_start: "00:35"
+    proof_end: "01:40"
+
+traps:
+  - type: shown_not_used
+    part: trv
+    at: "00:40"
+    expect: no_line
+  - type: price_spoken_aloud
+    part: ceramic_cartridge
+    at: "01:45"
+    expect: use_price_list
+
+privacy:
+  - type: framed_photo
+    first_seen: "00:00"
+    last_seen: "00:20"
+
+notes: "Said 'that cartridge is twenty quid' at 01:45; the price list says 12.50."

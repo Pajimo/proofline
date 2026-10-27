@@ -28,4 +28,6 @@ Labelled ground truth lives here. Raw footage does not: it stays in git-ignored 
 - Video plus narration vs narration only
 - Cost and seconds per job minute
 
+How to film and label a clip: [RECORDING.md](RECORDING.md). Ground truth goes in `ground_truth/<clip_id>.yaml`, starting from [`_template.yaml`](ground_truth/_template.yaml). Check it with `python evals/check_ground_truth.py`.
+
 Scoring scripts arrive on day 3 (29 Oct).

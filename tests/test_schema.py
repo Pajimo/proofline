@@ -34,3 +34,10 @@ def test_plumbing_pack_parts_have_prices_and_sam_prompts():
     assert pack["currency"] == "GBP"
     for part in pack["parts"]:
         assert part["price"] >= 0 and part["sam_prompts"], part["id"]
+
+
+def test_ground_truth_example_passes_checker():
+    sys.path.insert(0, str(ROOT / "evals"))
+    from check_ground_truth import check
+
+    assert check(ROOT / "evals" / "ground_truth" / "_example_trap.yaml", {}) == []
