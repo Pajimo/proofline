@@ -59,6 +59,7 @@ class LineItem:
 class Job:
     video: str
     lines: List[LineItem] = field(default_factory=list)
+    meta: dict = field(default_factory=dict)  # timings, summary, shown_not_used, work_dir
 
     @property
     def flagged(self) -> List[LineItem]:

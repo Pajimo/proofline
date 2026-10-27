@@ -13,6 +13,7 @@ All the code in this repository was written during the hackathon building period
 | Date | What was built |
 |---|---|
 | 27 Oct | Repo scaffold, verified-line-item schema, plumbing job pack, API smoke tests, ffmpeg pipeline |
+| 27 Oct | First end-to-end run: video → Voice Transcribe → Spark 1.3 → invoice lines priced from the pack, with proof links and flags |
 
 ## How it works
 
@@ -79,6 +80,12 @@ pip install -U pip
 pip install -e ".[dev]"
 cp .env.example .env   # then add your keys in an editor
 python scripts/smoke/run_all.py
+```
+
+Draft an invoice from a job video (it prints the draft and sends nothing):
+
+```bash
+PYTHONPATH=core python -m proofline job.mp4 --pack packs/plumbing.yaml --out evals/runs/job01
 ```
 
 ## Evals
