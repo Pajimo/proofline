@@ -8,7 +8,8 @@ import requests
 
 from .base import check, require_env
 
-DEFAULT_MODEL = "meta-models/muse-spark-open-1026"
+# The brief's hackathon id (meta-models/muse-spark-open-1026) returns 404; the public id works (27 Oct 2026).
+DEFAULT_MODEL = "meta-models/muse-spark-open"
 
 
 class BasetenClient:
