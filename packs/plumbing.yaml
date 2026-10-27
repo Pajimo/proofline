@@ -1,0 +1,102 @@
+# Proofline job pack: small domestic plumbing, no gas.
+# Prices are ILLUSTRATIVE placeholders for the demo. A real tradesperson sets their own.
+pack: plumbing
+version: 1
+currency: GBP
+vat_rate: 0.20          # applied only if the tradesperson is VAT-registered
+vat_registered: false
+
+labour:
+  rate_per_hour: 60.00
+  minimum_hours: 1.0
+  increment_hours: 0.25   # bill in 15-minute steps
+callout:
+  id: callout
+  description: Call-out charge
+  price: 45.00
+
+# Proofline refuses to draft these. Lines matching them are blocked, not flagged.
+excluded:
+  - id: gas_safe_record
+    reason: Gas work and Gas Safe records need a registered Gas Safe engineer.
+    keywords: [gas, boiler, gas safe, cp12, landlord gas safety, flue, gas valve]
+  - id: electrical_certificate
+    reason: Electrical certificates (EIC, MWC, EICR) need a qualified electrician.
+    keywords: [eicr, minor works certificate, electrical installation certificate, consumer unit, fuse board]
+
+# Jobs this pack covers. Proofline uses them to frame the extraction prompt.
+jobs:
+  - id: tap_cartridge
+    name: Replace tap cartridge
+    typical_minutes: 45
+    expected_parts: [ceramic_cartridge, o_ring_kit]
+    steps: [isolate water, remove handle, unscrew cartridge, fit new cartridge, reassemble, test for leaks]
+  - id: toilet_fill_valve
+    name: Replace toilet fill valve
+    typical_minutes: 60
+    expected_parts: [fill_valve, flexible_connector]
+    steps: [isolate water, flush and empty cistern, disconnect supply, remove old valve, fit new valve, set water level, test]
+  - id: radiator_valve
+    name: Replace radiator valve
+    typical_minutes: 75
+    expected_parts: [radiator_valve, ptfe_tape, inhibitor]
+    steps: [isolate radiator, drain down, remove old valve, fit new valve, refill, bleed, check for leaks]
+  - id: radiator_bleed
+    name: Bleed radiators and top up pressure
+    typical_minutes: 30
+    expected_parts: []
+    steps: [bleed each radiator, check boiler pressure gauge, top up via filling loop]
+
+# Price list. sam_prompts are short noun phrases. SAM 3.1 takes one concept per request.
+parts:
+  - id: ceramic_cartridge
+    name: Ceramic tap cartridge (1/2" quarter-turn)
+    unit: each
+    price: 12.50
+    aliases: [cartridge, tap cartridge, valve cartridge, ceramic disc]
+    sam_prompts: [tap cartridge]
+  - id: o_ring_kit
+    name: O-ring and washer kit
+    unit: kit
+    price: 4.00
+    aliases: [o-rings, o ring, washers, washer kit]
+    sam_prompts: [rubber o-ring, washer]
+  - id: fill_valve
+    name: Toilet fill valve (bottom entry)
+    unit: each
+    price: 18.00
+    aliases: [fill valve, float valve, ballcock, inlet valve, torbeck]
+    sam_prompts: [toilet fill valve]
+  - id: flexible_connector
+    name: Flexible tap connector 15mm x 1/2"
+    unit: each
+    price: 7.50
+    aliases: [flexi, flexi hose, flexible hose, tap connector]
+    sam_prompts: [braided hose]
+  - id: radiator_valve
+    name: Radiator valve 15mm (manual)
+    unit: each
+    price: 16.00
+    aliases: [rad valve, radiator valve, lockshield, wheelhead valve]
+    sam_prompts: [radiator valve]
+  - id: trv
+    name: Thermostatic radiator valve 15mm
+    unit: each
+    price: 28.00
+    aliases: [trv, thermostatic valve, thermostatic head]
+    sam_prompts: [thermostatic radiator valve]
+  - id: ptfe_tape
+    name: PTFE tape
+    unit: roll
+    price: 1.50
+    aliases: [ptfe, plumbers tape, thread tape]
+    sam_prompts: [ptfe tape roll]
+  - id: inhibitor
+    name: Central heating inhibitor (top-up)
+    unit: bottle
+    price: 14.00
+    aliases: [inhibitor, x100, fernox]
+    sam_prompts: [inhibitor bottle]
+
+# Privacy masking prompts, run on every clip before any other model sees it.
+privacy_prompts: [face, framed photo, house number, envelope]

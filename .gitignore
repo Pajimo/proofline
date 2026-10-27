@@ -1,0 +1,46 @@
+# Secrets: only .env.example is committed
+.env
+.env.*
+!.env.example
+
+# Personal media: never commit job footage or narration
+*.mp4
+*.mov
+*.MOV
+*.webm
+*.m4a
+*.wav
+*.aiff
+*.mp3
+media/
+recordings/
+scripts/smoke/.fixtures/
+evals/**/raw/
+evals/runs/
+
+# Evidence frames cut from real jobs (may show customers' homes)
+evidence/
+*.frames/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+build/
+dist/
+
+# Node / Next.js (apps/trades)
+node_modules/
+.next/
+out/
+.vercel/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
