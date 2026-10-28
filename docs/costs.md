@@ -24,3 +24,20 @@ So:
 Still to measure: cost per real job minute, and Spark Open on Baseten.
 
 Back-of-envelope for SAM: a 30-minute job at 30 fps is 54,000 frames, or $10.80 per concept. That is too much, so parts are tracked only within each line's time window, and video can be downsampled before masking.
+
+## Measured (28 Oct 2026): customer-style clips, 15 s
+
+**SAM 3.1, one request at a time.** 15 s clips cut from stock video:
+
+| Clip, prompt | 30 fps (450 frames) | 10 fps (150 frames) |
+|---|---|---|
+| outdoor tap, `tap` | 43.7 s (449 matched) | **12.5 s** (150 matched) |
+| toilet, `toilet` | 32.9 s (250 matched) | **13.2 s** (83 matched) |
+| kitchen tap, `tap` | 40.3 s (271 matched) | **11.4 s** (90 matched) |
+| kitchen tap, `water` | 8.4 s (0 matched) | 4.0 s (0 matched) |
+
+So highlights run at **10 fps on the evidence window**: about 12 s for a 15 s clip, plus about 3 s upload. Cost: 150 frames is $0.03. `water` matched nothing, even on a clip with running water, so highlight the part (tap, joint, gauge), not the water.
+
+**Spark 1.3 triage** (video, transcript and fault pack, medium reasoning): 13–25 s per clip. Total from receiving the clip to finding: 17–30 s, including ffmpeg, Transcribe (about 2 s) and upload (2–6 s).
+
+**Muse Wonder 1.0 tool calling**: two turns (tool call, then reply after the tool result) took 24.6 s in total. Each turn used about 400–500 reasoning tokens. That's slow for chat, so the hard stops and first reply must not wait on Wonder.

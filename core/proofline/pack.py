@@ -1,4 +1,4 @@
-"""Job packs: the price list, parts and rules for one trade (packs/plumbing.yaml)."""
+"""Trade packs: the price list, faults, safety rules and parts for one trade (packs/plumbing.yaml)."""
 from __future__ import annotations
 
 import math
@@ -17,6 +17,9 @@ class Pack:
         self.jobs = {j["id"]: j for j in data.get("jobs", [])}
         self.labour = data["labour"]
         self.excluded = data.get("excluded", [])
+        self.trade = data.get("trade", {})
+        self.safety = data.get("safety", [])
+        self.faults = {f["id"]: f for f in data.get("faults", [])}
 
     @classmethod
     def load(cls, path: str) -> "Pack":
@@ -58,4 +61,16 @@ class Pack:
         lines.append("Jobs this pack covers:")
         for j in self.jobs.values():
             lines.append(f"- {j['id']}: {j['name']} (usual steps: {', '.join(j.get('steps', []))})")
+        return "\n".join(lines)
+
+    def fault_catalogue(self) -> str:
+        """Fault list for the triage prompt. Estimates are left out: pricing happens in code."""
+        lines = ["Faults this trade handles (id: name; symptoms; what to film next):"]
+        for f in self.faults.values():
+            lines.append(f"- {f['id']}: {f['name']}; {', '.join(f.get('symptoms', []))}; "
+                         f"ask: {' | '.join(f.get('follow_up_questions', []))}; "
+                         f"needs a visit if: {', '.join(f.get('needs_visit_when', []))}")
+        lines.append("Parts (id: name):")
+        for p in self.parts.values():
+            lines.append(f"- {p['id']}: {p['name']}")
         return "\n".join(lines)

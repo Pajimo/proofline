@@ -1,5 +1,7 @@
-# Proofline job pack: small domestic plumbing, no gas.
+# Trade pack: small domestic plumbing, water side only. No gas work, ever.
 # Prices are ILLUSTRATIVE placeholders for the demo. A real tradesperson sets their own.
+# Sections: trade + labour (who the agent works for), safety (hard stops, checked before any reply),
+# faults (what the agent can triage from a customer video), parts (price list).
 pack: plumbing
 version: 1
 currency: GBP
@@ -15,16 +17,23 @@ callout:
   description: Call-out charge
   price: 45.00
 
-# Proofline refuses to draft these. Lines matching them are blocked, not flagged.
+trade:
+  business_name: Dave's Plumbing
+  owner_name: Dave
+  area: Manchester
+  # Every price the agent drafts carries this wording and goes to the owner first.
+  estimate_wording: Estimate, subject to inspection.
+
+# Never quoted or advised on. Lines matching them are blocked, not flagged.
 excluded:
   - id: gas_safe_record
     reason: Gas work and Gas Safe records need a registered Gas Safe engineer.
-    keywords: [gas, boiler, gas safe, cp12, landlord gas safety, flue, gas valve]
+    keywords: [gas, gas safe, cp12, landlord gas safety, flue, burner, pilot light]
   - id: electrical_certificate
     reason: Electrical certificates (EIC, MWC, EICR) need a qualified electrician.
     keywords: [eicr, minor works certificate, electrical installation certificate, consumer unit, fuse board]
 
-# Jobs this pack covers. Proofline uses them to frame the extraction prompt.
+# Jobs this pack covers (day-1 invoice pipeline). The pipeline uses them to frame the extraction prompt.
 jobs:
   - id: tap_cartridge
     name: Replace tap cartridge
@@ -97,6 +106,131 @@ parts:
     price: 14.00
     aliases: [inhibitor, x100, fernox]
     sam_prompts: [inhibitor bottle]
+
+  - id: tap_washer
+    name: Tap washer (1/2")
+    unit: each
+    price: 2.00
+    aliases: [washer, tap washer, jumper washer]
+    sam_prompts: [tap]
+  - id: compression_olive
+    name: 15mm compression olive and nut
+    unit: each
+    price: 2.50
+    aliases: [olive, compression fitting, compression nut]
+    sam_prompts: [pipe fitting]
+  - id: bottle_trap
+    name: Sink bottle trap 40mm
+    unit: each
+    price: 9.00
+    aliases: [trap, bottle trap, u-bend, waste trap]
+    sam_prompts: [sink trap]
+  - id: flush_valve
+    name: Toilet flush valve (siphon/drop valve)
+    unit: each
+    price: 22.00
+    aliases: [flush valve, siphon, drop valve, diaphragm]
+    sam_prompts: [toilet cistern]
+  - id: filling_loop
+    name: Boiler filling loop (water side)
+    unit: each
+    price: 12.00
+    aliases: [filling loop, braided filling loop, filling key]
+    sam_prompts: [pressure gauge]
+
+# Hard stops. Checked by keyword rules first, then a model check, before the agent replies.
+# Messages are fixed text, never model-written. Sources: National Gas Emergency Service (0800 111 999),
+# Gas Safe Register, Electrical Safety First.
+safety:
+  - kind: gas
+    keywords: [smell gas, smell of gas, smells of gas, gas smell, gas leak, smell like gas, rotten eggs,
+               hissing from the gas, gas meter hissing]
+    visual_prompts: [gas meter]
+    message: |
+      Please stop and do this now:
+      1. Call the National Gas Emergency Service on 0800 111 999 (free, 24/7).
+      2. Open doors and windows.
+      3. Turn off the gas at the meter, if it's safe to reach.
+      4. Don't use light switches, plugs, flames or cigarettes.
+      5. Go outside and wait for the engineer.
+      I've passed this to {owner}. I can't help any further with a gas problem by message.
+  - kind: carbon_monoxide
+    keywords: [co alarm, carbon monoxide, co detector, co2 alarm, alarm beeping near the boiler,
+               yellow flame, orange flame, sooty, soot marks, headache and dizzy, feel dizzy, feeling sick near]
+    message: |
+      This could be carbon monoxide. Please do this now:
+      1. Get everyone outside into fresh air, and open windows on the way if you can.
+      2. Turn off the boiler or appliance if it's safe.
+      3. Call the National Gas Emergency Service on 0800 111 999 (free, 24/7).
+      4. If anyone feels unwell (headache, dizziness, sickness), call 999 or NHS 111.
+      I've passed this to {owner}. Don't use the appliance until a Gas Safe registered engineer has checked it.
+  - kind: electrical
+    keywords: [burning smell, smell of burning, sparking, sparks, socket smoking, smoke from the socket,
+               scorch, scorched, melted socket, water near the socket, water in the light, dripping onto the light,
+               water on the fuse box, electric shock, tingling from the tap, buzzing socket]
+    visual_prompts: [electrical socket, light fitting, consumer unit]
+    message: |
+      Please don't touch it. This needs an electrician, not a plumber.
+      1. Keep away from the area, and keep children and pets away.
+      2. If it's safe to reach and dry where you stand, switch off the power at the fuse box (consumer unit).
+      3. If there's smoke or fire, get out and call 999.
+      I've passed this to {owner}, but please call a registered electrician.
+
+# Faults the agent can triage from a customer video. Estimates are ranges; the owner approves every one.
+# needs_visit_when: if any of these hold, route to "needs a visit" instead of an estimate.
+faults:
+  - id: dripping_tap
+    name: Dripping tap
+    symptoms: [tap drips when off, water dripping from spout, tap hard to turn off]
+    sam_prompts: [tap, water drip]
+    follow_up_questions:
+      - Is it the hot tap, the cold tap, or a mixer?
+      - Can you film the tap handle turning, and show me how far it turns?
+    likely_parts: [tap_washer, ceramic_cartridge, o_ring_kit]
+    estimate: {low: 65, high: 110, minutes: 45}
+    needs_visit_when: [tap body cracked, leaking from under the sink unit]
+  - id: leaking_compression_joint
+    name: Leaking compression joint
+    symptoms: [water bead on pipe fitting, drip under sink or radiator joint, damp patch below pipe]
+    sam_prompts: [pipe fitting, water drip]
+    follow_up_questions:
+      - Can you film the joint close up, and dry it with tissue first so we can see where the water comes from?
+      - Is the pipe copper or plastic?
+    likely_parts: [compression_olive, ptfe_tape]
+    estimate: {low: 60, high: 95, minutes: 30}
+    needs_visit_when: [water coming through a ceiling, joint inside a wall or under floorboards]
+  - id: low_boiler_pressure
+    name: Low boiler pressure (water side)
+    symptoms: [boiler pressure gauge below 1 bar, boiler error code for low pressure, radiators cold]
+    sam_prompts: [pressure gauge]
+    follow_up_questions:
+      - Can you film the pressure gauge on the front of the boiler, close enough to read the needle?
+      - Have you topped it up recently? If so, how often does it drop?
+      - Can you see any drips under the boiler or radiators?
+    likely_parts: [filling_loop]
+    estimate: {low: 45, high: 90, minutes: 30}
+    # Pressure keeps dropping means a leak somewhere; that needs a visit. Inside the boiler casing is gas-side.
+    needs_visit_when: [pressure drops again within days, water dripping from inside the boiler casing]
+  - id: blocked_sink
+    name: Blocked sink or basin
+    symptoms: [water drains slowly, standing water in sink, gurgling plughole]
+    sam_prompts: [sink, sink trap]
+    follow_up_questions:
+      - Can you film the water draining, for about ten seconds?
+      - Can you film the pipe under the sink, from the plughole down to the wall?
+    likely_parts: [bottle_trap]
+    estimate: {low: 60, high: 120, minutes: 45}
+    needs_visit_when: [more than one sink or the toilet is also blocked, sewage smell or backing up outside]
+  - id: leaking_toilet
+    name: Leaking toilet or fill valve
+    symptoms: [cistern keeps running, water trickles into the pan, cistern overflows, puddle at toilet base]
+    sam_prompts: [toilet, toilet cistern]
+    follow_up_questions:
+      - Can you lift the cistern lid and film inside it while it refills?
+      - Is the water on the floor clean, and where does it start?
+    likely_parts: [fill_valve, flush_valve, flexible_connector]
+    estimate: {low: 75, high: 140, minutes: 60}
+    needs_visit_when: [toilet pan cracked, leak from the soil pipe]
 
 # Privacy masking prompts, run on every clip before any other model sees it.
 privacy_prompts: [face, framed photo, house number, envelope]
