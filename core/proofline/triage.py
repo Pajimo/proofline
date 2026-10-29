@@ -25,6 +25,8 @@ from .safety.guard import GUARD_INSTRUCTIONS, looks_like_injection
 
 MIN_CONFIDENCE = 0.6  # below this a fault routes to "needs a visit"
 DANGER_CONFIDENCE = 0.5  # the model check stops at a lower bar than diagnosis: false alarms are cheap
+NOTHING_SEEN_QUESTION = ("I couldn't spot a plumbing problem in that video. What's going wrong? "
+                         "If you can, send a short video close up of the problem, e.g. the tap, pipe, toilet or boiler gauge.")
 
 TRIAGE_SCHEMA = {
     "type": "object",
@@ -129,6 +131,9 @@ def route(model: dict, pack: Pack, rules_stop: Optional[Stop]) -> Finding:
         reason = "couldn't identify the fault from the video" if fault is None else "low confidence"
         if model.get("missing_detail") and model.get("next_question"):
             return Finding(route="more", next_question=model["next_question"], visit_reason=reason, **base)
+        if fault is None and not model.get("needs_visit_reason"):
+            # Nothing plumbing-related in shot (wrong video, no problem visible): ask, don't book a visit.
+            return Finding(route="more", next_question=NOTHING_SEEN_QUESTION, visit_reason=reason, **base)
         return Finding(route="visit", visit_reason=reason, **base)
     if model.get("needs_visit_reason"):
         return Finding(route="visit", visit_reason=model["needs_visit_reason"], **base)

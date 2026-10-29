@@ -59,3 +59,13 @@ def test_missing_detail_asks_next_question():
 def test_needs_visit_condition():
     f = route(model(needs_visit_reason="water coming through a ceiling"), PACK, None)
     assert f.route == "visit"
+
+
+def test_nothing_plumbing_in_shot_asks_instead_of_visit():
+    f = route(model(fault_id=None, confidence=0.95, highlight="patio door"), PACK, None)
+    assert f.route == "more" and "video" in f.next_question and f.estimate is None
+
+
+def test_unknown_fault_with_visit_condition_still_visits():
+    f = route(model(fault_id=None, needs_visit_reason="water coming through a ceiling"), PACK, None)
+    assert f.route == "visit"
