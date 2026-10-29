@@ -22,6 +22,10 @@ trade:
   business_name: Dave's Plumbing
   owner_name: Dave
   # Asked when the video shows nothing this trade can help with.
+  # What this trade covers. Anything clearly outside it (and not dangerous) gets a polite "not us".
+  covers: [taps, pipes and joints, leaks, toilets and cisterns, sinks and drains, radiators,
+           water side of boilers (pressure, filling loop), showers, water tanks and cylinders]
+  not_covered: [gas work, electrics, doors and windows, roofs, plastering, carpentry, appliances]
   nothing_seen_question: >-
     I couldn't spot the problem in that video. What's going wrong? If you can, send a short video
     close up of it, for example the tap, pipe, toilet or boiler pressure gauge.

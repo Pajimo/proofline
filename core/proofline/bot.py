@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import re
 import threading
+from difflib import SequenceMatcher
 import time
 import traceback
 import uuid
@@ -28,6 +29,8 @@ from .triage import Finding, diagnose
 HANDOFF = re.compile(r"\b(talk|speak|chat) to (dave|a human|a person|someone|the owner)\b|\bhuman\b|\breal person\b", re.I)
 RANGE = re.compile(r"£?\s*(\d+(?:\.\d+)?)\s*(?:-|–|to)\s*£?\s*(\d+(?:\.\d+)?)")
 MAX_VIDEO_BYTES = 16 * 1024 * 1024  # WhatsApp's limit for sending video
+SAME_QUESTION = 0.75  # similarity above which a follow-up counts as asking the same thing again
+OWNER_PREFIX = "👷 For {owner}: "  # marks owner messages, so one phone can play both roles in testing
 
 
 @dataclass
@@ -35,6 +38,7 @@ class Thread:
     customer: str
     greeted: bool = False
     history: List[str] = field(default_factory=list)  # short lines, fed back to triage as context
+    asked: List[str] = field(default_factory=list)  # follow-up questions already sent
     jobs: List[str] = field(default_factory=list)
     stopped: Optional[str] = None  # safety kind once a hard stop has fired
 
@@ -64,6 +68,7 @@ class Bot:
         self._locks: Dict[str, threading.Lock] = {}
         self.owner_name = pack.trade.get("owner_name", "the owner")
         self.business = pack.trade.get("business_name", "")
+        self._load()
 
     # ---- entry point -------------------------------------------------------------------------------
     def handle(self, m: Inbound) -> None:
@@ -115,6 +120,12 @@ class Bot:
             return self._stop(th, stop.kind, source="rules")
         if HANDOFF.search(text):
             return self._handoff(th, "customer asked for a person")
+        excluded = self.pack.excluded_match(text) if text else None
+        if excluded:  # e.g. gas-side boiler work: never advised on or quoted by message
+            th.history.append(f"Assistant: excluded work ({excluded['id']}).")
+            self._say(m.sender, f"{excluded['reason']} I can't advise on that by message, and please don't attempt it "
+                                f"yourself. I've let {self.owner_name} know you got in touch.")
+            return self._send_owner(f"Customer ...{m.sender[-4:]} asked about excluded work ({excluded['id']}): {text[:200]}")
 
         if m.type == "video":
             self._say(m.sender, "Thanks, I'm taking a look at the video now. This takes about 30 seconds.")
@@ -150,7 +161,17 @@ class Bot:
 
         if f.route == "stop":
             return self._stop(th, f.safety["kind"], source=f.safety.get("source", "model"))
+        if f.route == "out_of_scope":
+            area = f.problem_area or "that"
+            th.history.append(f"Assistant: out of scope ({area}).")
+            return self._say(th.customer, f"Thanks for sending that. It looks like a problem with {area}, which "
+                                          f"{self.owner_name} doesn't cover as a {self.pack.trade.get('label', 'tradesperson')}. "
+                                          f"If there's water, a leak or damp involved, tell me and I'll pass it on.")
         if f.route == "more":
+            if any(SequenceMatcher(None, f.next_question.lower(), q.lower()).ratio() >= SAME_QUESTION for q in th.asked):
+                # Asked already and still stuck: a person takes over rather than going round in circles.
+                return self._handoff(th, "the assistant couldn't get what it needed")
+            th.asked.append(f.next_question)
             th.history.append(f"Assistant asked: {f.next_question}")
             return self._say(th.customer, f.next_question)
         if f.route == "visit":
@@ -194,7 +215,7 @@ class Bot:
         if not self.owner:
             return self.log(f"-> owner approval (not set, not sent): {body}")
         try:
-            self.wa.send_buttons(self.owner, body, [(f"approve:{job.id}", "Approve"), (f"edit:{job.id}", "Edit")])
+            self.wa.send_buttons(self.owner, OWNER_PREFIX.format(owner=self.owner_name) + body, [(f"approve:{job.id}", "Approve"), (f"edit:{job.id}", "Edit")])
         except Exception as exc:  # noqa: BLE001
             self.log(f"   couldn't reach the owner (has their phone messaged the number in the last 24h?): {exc}")
 
@@ -249,7 +270,7 @@ class Bot:
         if not self.owner:
             return self.log(f"-> owner (not set, not sent): {text[:200]}")
         try:
-            self.wa.send_text(self.owner, text)
+            self.wa.send_text(self.owner, OWNER_PREFIX.format(owner=self.owner_name) + text)
             self.log(f"-> owner: {text[:120]}")
         except Exception as exc:  # noqa: BLE001
             self.log(f"   couldn't reach the owner (has their phone messaged the number in the last 24h?): {exc}")
@@ -257,11 +278,22 @@ class Bot:
     def _send_owner_video(self, clip: Path, caption: str) -> None:
         if self.owner and clip.exists() and clip.stat().st_size < MAX_VIDEO_BYTES:
             try:
-                self.wa.send_video(self.owner, str(clip), caption=caption)
+                self.wa.send_video(self.owner, str(clip), caption=OWNER_PREFIX.format(owner=self.owner_name) + caption)
             except Exception as exc:  # noqa: BLE001
                 self.log(f"   couldn't send the clip to the owner: {exc}")
 
+    def _load(self) -> None:
+        """Pick up conversations and pending quotes from the last run."""
+        path = self.work / "state.json"
+        if not path.exists():
+            return
+        state = json.loads(path.read_text())
+        self.threads = {k: Thread(**v) for k, v in state.get("threads", {}).items()}
+        self.jobs = {k: Job(**v) for k, v in state.get("jobs", {}).items()}
+        self.pending_edit = state.get("pending_edit")
+        self.log(f"loaded {len(self.threads)} conversation(s), {len(self.jobs)} job(s) from the last run")
+
     def _save(self) -> None:
         state = {"threads": {k: asdict(v) for k, v in self.threads.items()},
-                 "jobs": {k: asdict(v) for k, v in self.jobs.items()}}
+                 "jobs": {k: asdict(v) for k, v in self.jobs.items()}, "pending_edit": self.pending_edit}
         (self.work / "state.json").write_text(json.dumps(state, indent=2, default=str))

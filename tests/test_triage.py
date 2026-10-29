@@ -69,3 +69,13 @@ def test_nothing_plumbing_in_shot_asks_instead_of_visit():
 def test_unknown_fault_with_visit_condition_still_visits():
     f = route(model(fault_id=None, needs_visit_reason="water coming through a ceiling"), PACK, None)
     assert f.route == "visit"
+
+
+def test_out_of_scope_when_not_this_trade():
+    f = route(model(fault_id=None, in_scope=False, problem_area="patio door"), PACK, None)
+    assert f.route == "out_of_scope" and f.problem_area == "patio door"
+
+
+def test_danger_beats_out_of_scope():
+    f = route(model(fault_id=None, in_scope=False, danger="electrical", danger_confidence=0.8), PACK, None)
+    assert f.route == "stop"

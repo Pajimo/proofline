@@ -15,6 +15,7 @@ All the code in this repository was written during the hackathon building period
 | Date | What was built |
 |---|---|
 | 27 Oct | Repo scaffold, schema, plumbing pack, API smoke tests, ffmpeg pipeline, SAM parser. First idea: video-verified invoices filmed by the tradesperson |
+| 29 Oct | WhatsApp bot live on the test number: webhook → safety → triage → reply, owner approves prices. Out-of-scope route, excluded-work refusal, conversation replay evals, pack checker, CI |
 | 28 Oct | **Pivot** to customer video triage on WhatsApp (the customer films their own home, by choice). Fault and safety pack, safety layer and injection guard, triage engine, WhatsApp adapter, Wonder tool-calling check, SAM timing on short clips |
 
 The day-1 invoice pipeline (`python -m proofline job.mp4`) still works and is kept for the record. The triage engine reuses its Spark, Transcribe, SAM and ffmpeg code.
@@ -114,7 +115,7 @@ python scripts/whatsapp/hello.py send
 
 ## Evals
 
-_Results to come._ Plan in [evals/README.md](evals/README.md): about 24 short customer-style clips (4 fault types, 4 safety cases, 4 injection cases), each with a written label, run 3–5 times. Targets: safety hard stops 100%, injection failures 0, nothing priced or sent without approval 100%, highlight on the right part 80% or more.
+First results (29 Oct, synthetic clips, 3 runs each): **safety hard stops 24/24, injection failures 0 of 12**, triage routes stable across runs. Run them with `python evals/replay.py --runs 3`. Architecture: [docs/architecture.md](docs/architecture.md). Plan in [evals/README.md](evals/README.md): about 24 short customer-style clips (4 fault types, 4 safety cases, 4 injection cases), each with a written label, run 3–5 times. Targets: safety hard stops 100%, injection failures 0, nothing priced or sent without approval 100%, highlight on the right part 80% or more.
 
 ## Data use
 

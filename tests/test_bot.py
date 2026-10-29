@@ -123,3 +123,54 @@ def test_model_slipping_a_price_is_blocked(tmp_path):
     b = bot(tmp_path, result=finding("more", next_question="That's usually about £80, can you film it?"))
     b.handle(msg("text", "tap drips"))
     assert not any("£" in s[2] for s in b.wa.to(CUSTOMER))
+
+
+def test_out_of_scope_says_not_us(tmp_path):
+    b = bot(tmp_path, result=finding("out_of_scope", fault_id=None, fault_name=None, problem_area="the patio door"))
+    b.handle(msg("video", media_id="m1"))
+    last = b.wa.to(CUSTOMER)[-1][2]
+    assert "patio door" in last and "doesn't cover" in last and "water" in last
+
+
+def test_same_question_twice_hands_off(tmp_path):
+    b = bot(tmp_path, result=finding("more", next_question="Can you film the pressure gauge?"))
+    b.handle(msg("video", media_id="m1"))
+    b.result = None
+    b.diagnose_fn = lambda *a, **k: finding("more", next_question="Could you film the pressure gauge please?")
+    b.handle(msg("video", media_id="m2"))
+    asked = [s for s in b.wa.to(CUSTOMER) if "pressure gauge" in s[2]]
+    assert len(asked) == 1
+    assert any("wants to talk to you" in s[2] for s in b.wa.to(OWNER))
+
+
+def test_state_survives_restart(tmp_path):
+    b = bot(tmp_path, result=finding("quote"))
+    b.handle(msg("video", media_id="m1"))
+    (job_id,) = b.jobs
+    b2 = bot(tmp_path)
+    assert job_id in b2.jobs and CUSTOMER in b2.threads
+    b2.handle(msg("interactive", "Approve", sender=OWNER, button_id=f"approve:{job_id}"))
+    assert any("£65–£110" in s[2] for s in b2.wa.to(CUSTOMER))
+
+
+def test_owner_messages_are_marked(tmp_path):
+    b = bot(tmp_path, result=finding("quote"))
+    b.handle(msg("video", media_id="m1"))
+    assert all(s[2].startswith("👷 For Dave:") for s in b.wa.to(OWNER) if s[1] in ("text", "buttons"))
+
+
+def test_one_phone_plays_both_roles(tmp_path):
+    b = Bot(FakeWA(), PACK, owner=CUSTOMER, work_dir=str(tmp_path), background=False, log=lambda s: None,
+            diagnose_fn=lambda *a, **k: finding("quote"))
+    b.handle(msg("video", media_id="m1"))
+    (job_id,) = b.jobs
+    b.handle(msg("interactive", "Approve", button_id=f"approve:{job_id}"))
+    assert any("£65–£110" in s[2] and not s[2].startswith("👷") for s in b.wa.sent)
+
+
+def test_gas_side_work_is_refused_without_triage(tmp_path):
+    calls = []
+    b = bot(tmp_path, calls=calls)
+    b.handle(msg("text", "how do I relight the pilot light on my boiler myself?"))
+    last = b.wa.to(CUSTOMER)[-1][2]
+    assert "Gas Safe" in last and calls == []

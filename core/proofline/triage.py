@@ -4,6 +4,7 @@ Spark 1.3 only describes what it sees and hears. Routing, safety stops and estim
 so a model can't send a price or skip a hard stop.
 
   route = stop   → a hard stop (gas, CO, electrical). Fixed message, owner told, no diagnosis.
+          out_of_scope → clearly not this trade's work (a door for a plumber) and no water involved.
           visit  → low confidence or a needs-a-visit condition. Never a guess.
           more   → a likely fault but a key detail is missing: ask the next question.
           quote  → fault identified with enough evidence: draft an estimate for the owner to approve.
@@ -31,13 +32,16 @@ NOTHING_SEEN_QUESTION = ("I couldn't spot the problem in that video. What's goin
 TRIAGE_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["danger", "danger_confidence", "danger_reason", "fault_id", "description", "confidence",
+    "required": ["danger", "danger_confidence", "danger_reason", "in_scope", "problem_area", "fault_id",
+                 "description", "confidence",
                  "evidence_t_start", "evidence_t_end", "highlight", "reading", "missing_detail",
                  "next_question", "needs_visit_reason", "likely_parts"],
     "properties": {
         "danger": {"type": "string", "enum": ["none", "gas", "carbon_monoxide", "electrical"]},
         "danger_confidence": {"type": "number"},
         "danger_reason": {"type": ["string", "null"]},
+        "in_scope": {"type": "boolean"},
+        "problem_area": {"type": "string"},
         "fault_id": {"type": ["string", "null"]},
         "description": {"type": "string"},
         "confidence": {"type": "number"},
@@ -72,6 +76,9 @@ Report:
 - danger: "gas" (gas smell, hissing gas meter), "carbon_monoxide" (CO alarm sounding, yellow/orange flame,
   soot marks, CO symptoms), "electrical" (burning smell, sparking, scorch marks, water on or near sockets,
   lights or the fuse box), else "none". danger_confidence 0-1 and a short danger_reason.
+- in_scope: false only if the problem is clearly outside what this trade covers ({covers}), e.g. a stuck
+  door for a plumber, AND no water, leak or damp is involved. If unsure, true.
+- problem_area: a few words for what the problem is about, e.g. "kitchen tap", "patio door".
 - fault_id: the best match from the list above, or null if it isn't one of them or you can't tell.
 - description: one or two plain sentences for the plumber about what you can see, e.g. "Water beading
   on the 15mm compression nut under the kitchen sink."
@@ -89,7 +96,7 @@ Report:
 
 @dataclass
 class Finding:
-    route: str  # stop | visit | more | quote
+    route: str  # stop | out_of_scope | visit | more | quote
     fault_id: Optional[str]
     fault_name: Optional[str]
     description: str
@@ -104,6 +111,7 @@ class Finding:
     safety: Optional[dict] = None  # Stop as a dict
     visit_reason: Optional[str] = None
     injection: Optional[str] = None  # flagged text, for logs and evals only
+    problem_area: Optional[str] = None
     timings: dict = field(default_factory=dict)
     raw: Optional[dict] = None
 
@@ -126,6 +134,9 @@ def route(model: dict, pack: Pack, rules_stop: Optional[Stop]) -> Finding:
         stop = Stop(kind=model["danger"], source="model", reason=model.get("danger_reason") or "")
     if stop is not None:
         return Finding(route="stop", safety=asdict(stop), **{**base, "next_question": None})
+
+    if fault is None and model.get("in_scope") is False:
+        return Finding(route="out_of_scope", problem_area=model.get("problem_area"), **base)
 
     if fault is None or base["confidence"] < MIN_CONFIDENCE:
         reason = "couldn't identify the fault from the video" if fault is None else "low confidence"
@@ -189,6 +200,7 @@ def diagnose(video: Optional[str], pack: Pack, message: str = "", history: str =
         fid = None
 
     prompt = PROMPT.format(trade=pack.trade.get("label", "tradesperson"), guard=GUARD_INSTRUCTIONS,
+                           covers=", ".join(pack.trade.get("covers", [])) or "this trade's usual work",
                            catalogue=pack.fault_catalogue(),
                            history=wrap_untrusted(history or "(none)", "conversation_history"),
                            message=wrap_untrusted(message or "(no text)", "whatsapp_text"),
