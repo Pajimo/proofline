@@ -18,8 +18,13 @@ callout:
   price: 45.00
 
 trade:
+  label: plumber          # used in prompts: "help a UK plumber triage..."
   business_name: Dave's Plumbing
   owner_name: Dave
+  # Asked when the video shows nothing this trade can help with.
+  nothing_seen_question: >-
+    I couldn't spot the problem in that video. What's going wrong? If you can, send a short video
+    close up of it, for example the tap, pipe, toilet or boiler pressure gauge.
   area: Manchester
   # Every price the agent drafts carries this wording and goes to the owner first.
   estimate_wording: Estimate, subject to inspection.

@@ -25,8 +25,8 @@ from .safety.guard import GUARD_INSTRUCTIONS, looks_like_injection
 
 MIN_CONFIDENCE = 0.6  # below this a fault routes to "needs a visit"
 DANGER_CONFIDENCE = 0.5  # the model check stops at a lower bar than diagnosis: false alarms are cheap
-NOTHING_SEEN_QUESTION = ("I couldn't spot a plumbing problem in that video. What's going wrong? "
-                         "If you can, send a short video close up of the problem, e.g. the tap, pipe, toilet or boiler gauge.")
+NOTHING_SEEN_QUESTION = ("I couldn't spot the problem in that video. What's going wrong? "
+                         "If you can, send a short video close up of it.")  # packs override via trade.nothing_seen_question
 
 TRIAGE_SCHEMA = {
     "type": "object",
@@ -52,7 +52,7 @@ TRIAGE_SCHEMA = {
     },
 }
 
-PROMPT = """You help a UK plumber triage a customer's problem from a short video the customer filmed at home.
+PROMPT = """You help a UK {trade} triage a customer's problem from a short video the customer filmed at home.
 You describe what you see and hear. You never give prices and never give DIY steps for gas or electrics.
 
 {guard}
@@ -133,7 +133,8 @@ def route(model: dict, pack: Pack, rules_stop: Optional[Stop]) -> Finding:
             return Finding(route="more", next_question=model["next_question"], visit_reason=reason, **base)
         if fault is None and not model.get("needs_visit_reason"):
             # Nothing plumbing-related in shot (wrong video, no problem visible): ask, don't book a visit.
-            return Finding(route="more", next_question=NOTHING_SEEN_QUESTION, visit_reason=reason, **base)
+            question = pack.trade.get("nothing_seen_question") or NOTHING_SEEN_QUESTION
+            return Finding(route="more", next_question=question, visit_reason=reason, **base)
         return Finding(route="visit", visit_reason=reason, **base)
     if model.get("needs_visit_reason"):
         return Finding(route="visit", visit_reason=model["needs_visit_reason"], **base)
@@ -187,8 +188,9 @@ def diagnose(video: Optional[str], pack: Pack, message: str = "", history: str =
     else:
         fid = None
 
-    prompt = PROMPT.format(guard=GUARD_INSTRUCTIONS, catalogue=pack.fault_catalogue(),
-                           history=history or "(none)",
+    prompt = PROMPT.format(trade=pack.trade.get("label", "tradesperson"), guard=GUARD_INSTRUCTIONS,
+                           catalogue=pack.fault_catalogue(),
+                           history=wrap_untrusted(history or "(none)", "conversation_history"),
                            message=wrap_untrusted(message or "(no text)", "whatsapp_text"),
                            turns=wrap_untrusted(format_turns(turns), "video_audio"))
     body = {
