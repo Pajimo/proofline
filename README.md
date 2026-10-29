@@ -118,7 +118,7 @@ _Results to come._ Plan in [evals/README.md](evals/README.md): about 24 short cu
 
 ## Data use
 
-See [docs/data-use.md](docs/data-use.md). In short: the product uses Meta's standard Model API, whose terms say request content is not used to train Meta models. The tradesperson is the business responsible for their customers' data.
+See [docs/data-use.md](docs/data-use.md) and the [privacy policy](docs/privacy-policy.md). In short: the product uses Meta's standard Model API, whose terms say request content is not used to train Meta models. The tradesperson is the business responsible for their customers' data.
 
 ## Model licences
 
